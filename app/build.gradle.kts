@@ -113,7 +113,7 @@ android {
 
     defaultConfig {
         applicationId = "ua.kadr.app"
-        manifestPlaceholders["appLabel"] = "Кадр"
+        manifestPlaceholders["appLabel"] = "Вечорниці"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
         versionCode = libs.versions.versionCode.get().toInt()

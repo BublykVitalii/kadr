@@ -1,4 +1,4 @@
-name: Кадр — збірка APK
+name: Вечорниці — збірка APK
 
 # Запускається:
 #  - при кожному пуші в гілку kadr
@@ -66,12 +66,12 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleStableRelease
           mkdir -p out
-          cp app/build/outputs/apk/stable/release/*.apk out/kadr.apk
+          cp app/build/outputs/apk/stable/release/*.apk out/vechornytsi.apk
 
       - uses: actions/upload-artifact@v7
         with:
-          name: kadr-apk
-          path: out/kadr.apk
+          name: vechornytsi-apk
+          path: out/vechornytsi.apk
 
       - name: Опублікувати як реліз "latest"
         env:
@@ -79,7 +79,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           gh release delete latest --yes --cleanup-tag || true
-          gh release create latest out/kadr.apk \
-            --title "Кадр — свіжа збірка" \
+          gh release create latest out/vechornytsi.apk \
+            --title "Вечорниці — свіжа збірка" \
             --notes "Зібрано $(date -u +'%Y-%m-%d %H:%M UTC') з коміту ${GITHUB_SHA::7}" \
             --target kadr
