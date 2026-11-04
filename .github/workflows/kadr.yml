@@ -76,6 +76,7 @@ jobs:
       - name: Опублікувати як реліз "latest"
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           gh release delete latest --yes --cleanup-tag || true
           gh release create latest out/kadr.apk \
