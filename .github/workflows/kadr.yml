@@ -1,0 +1,84 @@
+name: Кадр — збірка APK
+
+# Запускається:
+#  - при кожному пуші в гілку kadr
+#  - вручну (Actions → "Кадр — збірка APK" → Run workflow)
+#  - щонеділі: підтягує свіжий CloudStream з upstream і перезбирає
+on:
+  push:
+    branches: [ kadr ]
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * 0"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kadr-build
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: kadr
+          fetch-depth: 0
+
+      - name: Підтягнути оновлення CloudStream (тільки за розкладом / вручну)
+        if: github.event_name != 'push'
+        run: |
+          git config user.name "kadr-bot"
+          git config user.email "kadr-bot@users.noreply.github.com"
+          git remote add upstream https://github.com/recloudstream/cloudstream.git
+          git fetch upstream master
+          if git merge --no-edit upstream/master; then
+            git push origin kadr
+          else
+            echo "::error::Конфлікт при злитті з upstream — треба розібрати вручну"
+            exit 1
+          fi
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: Ключ підпису
+        env:
+          KADR_KEYSTORE_B64: ${{ secrets.KADR_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KADR_KEYSTORE_B64" ]; then
+            echo "$KADR_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/kadr.jks"
+            echo "KADR_KEYSTORE_PATH=$RUNNER_TEMP/kadr.jks" >> "$GITHUB_ENV"
+          else
+            echo "::warning::Секрет KADR_KEYSTORE_B64 не задано — APK підписано тимчасовим ключем"
+          fi
+
+      - name: Збірка
+        env:
+          KADR_KEYSTORE_PASSWORD: ${{ secrets.KADR_KEYSTORE_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleStableRelease
+          mkdir -p out
+          cp app/build/outputs/apk/stable/release/*.apk out/kadr.apk
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: kadr-apk
+          path: out/kadr.apk
+
+      - name: Опублікувати як реліз "latest"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest --yes --cleanup-tag || true
+          gh release create latest out/kadr.apk \
+            --title "Кадр — свіжа збірка" \
+            --notes "Зібрано $(date -u +'%Y-%m-%d %H:%M UTC') з коміту ${GITHUB_SHA::7}" \
+            --target kadr

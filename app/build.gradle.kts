@@ -85,6 +85,15 @@ android {
     }
 
     signingConfigs {
+        // Кадр: постійний ключ із GitHub-секрету KADR_KEYSTORE_B64, щоб оновлення ставились поверх
+        if (System.getenv("KADR_KEYSTORE_PATH") != null) {
+            create("kadr") {
+                storeFile = file(System.getenv("KADR_KEYSTORE_PATH"))
+                storePassword = System.getenv("KADR_KEYSTORE_PASSWORD")
+                keyAlias = "kadr"
+                keyPassword = System.getenv("KADR_KEYSTORE_PASSWORD")
+            }
+        }
         // We just use SIGNING_KEY_ALIAS here since it won't change
         // so won't kill the configuration cache.
         if (System.getenv("SIGNING_KEY_ALIAS") != null) {
@@ -103,7 +112,8 @@ android {
     compileSdk = libs.versions.compileSdk.get().toInt()
 
     defaultConfig {
-        applicationId = "com.lagradost.cloudstream3"
+        applicationId = "ua.kadr.app"
+        manifestPlaceholders["appLabel"] = "Кадр"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
         versionCode = libs.versions.versionCode.get().toInt()
@@ -144,6 +154,8 @@ android {
 
     buildTypes {
         release {
+            // Кадр: підписуємо debug-ключем, щоб APK можна було встановити без секретів
+            signingConfig = if (signingConfigs.names.contains("kadr")) signingConfigs.getByName("kadr") else signingConfigs.getByName("debug")
             isDebuggable = false
             isMinifyEnabled = false
             isShrinkResources = false
