@@ -26,18 +26,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.text.font.FontWeight
@@ -46,18 +40,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.Observer
 import androidx.navigation.fragment.findNavController
-import coil3.compose.AsyncImage
-import coil3.network.NetworkHeaders
-import coil3.network.httpHeaders
-import coil3.request.ImageRequest
-import coil3.request.crossfade
 import com.lagradost.cloudstream3.LoadResponse
 import com.lagradost.cloudstream3.R
 import com.lagradost.cloudstream3.SearchResponse
-import com.lagradost.cloudstream3.USER_AGENT
 import com.lagradost.cloudstream3.mvvm.Resource
 import com.lagradost.cloudstream3.ui.home.HomeFragment
 import com.lagradost.cloudstream3.ui.home.HomeViewModel
@@ -66,18 +52,6 @@ import com.lagradost.cloudstream3.ui.search.SEARCH_ACTION_LOAD
 import com.lagradost.cloudstream3.ui.search.SearchClickCallback
 import com.lagradost.cloudstream3.ui.search.SearchHelper
 import com.lagradost.cloudstream3.utils.DataStoreHelper
-
-/** Кольори з макета «Вечорниці» */
-private object K {
-    val bg = Color(0xFF0E0F13)
-    val panel = Color(0xFF1B1F29)
-    val card = Color(0xFF1A1C23)
-    val chipBorder = Color(0xFF2A2D36)
-    val text = Color(0xFFF2F2F4)
-    val muted = Color(0xFFA0A3AD)
-    val accent = Color(0xFFFFB020)
-    val onAccent = Color(0xFF14120B)
-}
 
 /**
  * Нова головна «Вечорниці» (Compose). Дані бере з того самого HomeViewModel,
@@ -130,17 +104,6 @@ class KadrHomeFragment : Fragment() {
 }
 
 @Composable
-private fun <T> LiveData<T>.asState(): State<T?> {
-    val state = remember(this) { mutableStateOf(this.value) }
-    DisposableEffect(this) {
-        val observer = Observer<T> { state.value = it }
-        observeForever(observer)
-        onDispose { removeObserver(observer) }
-    }
-    return state
-}
-
-@Composable
 private fun KadrHomeScreen(
     vm: HomeViewModel,
     onSearch: () -> Unit,
@@ -165,7 +128,7 @@ private fun KadrHomeScreen(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(K.bg),
+            .background(KColors.bg),
         contentPadding = PaddingValues(horizontal = 32.dp, vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
@@ -197,13 +160,13 @@ private fun KadrHomeScreen(
         }
 
         if (page is Resource.Loading && lists.isEmpty()) {
-            item { Text("Завантажую…", color = K.muted, fontSize = 15.sp) }
+            item { Text("Завантажую…", color = KColors.muted, fontSize = 15.sp) }
         }
         if (page is Resource.Failure) {
             item {
                 Text(
                     "Не вдалося завантажити сайт. Спробуй інше джерело.",
-                    color = K.muted, fontSize = 15.sp
+                    color = KColors.muted, fontSize = 15.sp
                 )
             }
         }
@@ -236,14 +199,14 @@ private fun TopBar(source: String?, onPickSource: () -> Unit, onSearch: () -> Un
             modifier = Modifier
                 .height(44.dp)
                 .clip(RoundedCornerShape(22.dp))
-                .background(K.accent)
+                .background(KColors.accent)
                 .clickable { onPickSource() }
                 .padding(horizontal = 18.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = "Сайт: ${source ?: "обрати"}  ▾",
-                color = K.onAccent, fontSize = 14.sp, fontWeight = FontWeight.SemiBold
+                color = KColors.onAccent, fontSize = 14.sp, fontWeight = FontWeight.SemiBold
             )
         }
         Spacer(Modifier.weight(1f))
@@ -252,12 +215,12 @@ private fun TopBar(source: String?, onPickSource: () -> Unit, onSearch: () -> Un
                 .width(300.dp)
                 .height(44.dp)
                 .clip(RoundedCornerShape(22.dp))
-                .background(K.card)
+                .background(KColors.card)
                 .clickable { onSearch() }
                 .padding(horizontal = 18.dp),
             contentAlignment = Alignment.CenterStart
         ) {
-            Text("Пошук на всіх сайтах", color = K.muted, fontSize = 14.sp)
+            Text("Пошук на всіх сайтах", color = KColors.muted, fontSize = 14.sp)
         }
     }
 }
@@ -276,7 +239,7 @@ private fun HeroBanner(hero: LoadResponse, onOpen: () -> Unit) {
             modifier = Modifier
                 .fillMaxHeight()
                 .fillMaxWidth(0.42f)
-                .background(K.panel)
+                .background(KColors.heroPanel)
                 .padding(28.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.Bottom)
         ) {
@@ -288,7 +251,7 @@ private fun HeroBanner(hero: LoadResponse, onOpen: () -> Unit) {
             Text(meta, color = Color(0xFFB8BBC4), fontSize = 13.sp, maxLines = 1,
                 overflow = TextOverflow.Ellipsis)
             Text(
-                hero.name, color = K.text, fontSize = 30.sp, fontWeight = FontWeight.Bold,
+                hero.name, color = KColors.text, fontSize = 30.sp, fontWeight = FontWeight.Bold,
                 maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 34.sp
             )
             hero.plot?.let {
@@ -300,15 +263,15 @@ private fun HeroBanner(hero: LoadResponse, onOpen: () -> Unit) {
                     .padding(top = 4.dp)
                     .height(48.dp)
                     .clip(RoundedCornerShape(14.dp))
-                    .background(K.accent)
+                    .background(KColors.accent)
                     .padding(horizontal = 24.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text("▶  Дивитись", color = K.onAccent, fontSize = 15.sp,
+                Text("▶  Дивитись", color = KColors.onAccent, fontSize = 15.sp,
                     fontWeight = FontWeight.Bold)
             }
         }
-        Image(
+        KImage(
             url = hero.backgroundPosterUrl ?: hero.posterUrl,
             headers = hero.posterHeaders,
             modifier = Modifier.fillMaxSize()
@@ -319,7 +282,7 @@ private fun HeroBanner(hero: LoadResponse, onOpen: () -> Unit) {
 @Composable
 private fun Section(title: String, content: @Composable () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(title, color = K.text, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+        Text(title, color = KColors.text, fontSize = 19.sp, fontWeight = FontWeight.Bold)
         content()
     }
 }
@@ -346,9 +309,9 @@ private fun ResumeCard(card: SearchResponse, onClick: () -> Unit) {
                 .fillMaxWidth()
                 .aspectRatio(16f / 9f)
                 .clip(RoundedCornerShape(14.dp))
-                .background(K.card)
+                .background(KColors.card)
         ) {
-            Image(card.posterUrl, card.posterHeaders, Modifier.fillMaxSize())
+            KImage(card.posterUrl, card.posterHeaders, Modifier.fillMaxSize())
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
@@ -361,13 +324,13 @@ private fun ResumeCard(card: SearchResponse, onClick: () -> Unit) {
                     .align(Alignment.BottomStart)
                     .fillMaxWidth(progress)
                     .height(4.dp)
-                    .background(K.accent)
+                    .background(KColors.accent)
             )
         }
-        Text(card.name, color = K.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+        Text(card.name, color = KColors.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
             maxLines = 1, overflow = TextOverflow.Ellipsis)
         if (episode.isNotEmpty()) {
-            Text(episode, color = K.muted, fontSize = 12.sp)
+            Text(episode, color = KColors.muted, fontSize = 12.sp)
         }
     }
 }
@@ -385,9 +348,9 @@ private fun PosterCard(card: SearchResponse, onClick: () -> Unit) {
                 .fillMaxWidth()
                 .aspectRatio(2f / 3f)
                 .clip(RoundedCornerShape(12.dp))
-                .background(K.card)
+                .background(KColors.card)
         ) {
-            Image(card.posterUrl, card.posterHeaders, Modifier.fillMaxSize())
+            KImage(card.posterUrl, card.posterHeaders, Modifier.fillMaxSize())
             card.quality?.let { q ->
                 Box(
                     modifier = Modifier
@@ -396,11 +359,11 @@ private fun PosterCard(card: SearchResponse, onClick: () -> Unit) {
                         .background(Color(0xD90E0F13))
                         .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
-                    Text(q.name, color = K.text, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text(q.name, color = KColors.text, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
-        Text(card.name, color = K.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+        Text(card.name, color = KColors.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
             maxLines = 2, overflow = TextOverflow.Ellipsis)
     }
 }
@@ -418,34 +381,13 @@ private fun WideCard(card: SearchResponse, onClick: () -> Unit) {
                 .fillMaxWidth()
                 .aspectRatio(16f / 9f)
                 .clip(RoundedCornerShape(14.dp))
-                .background(K.card)
-                .border(1.dp, K.chipBorder, RoundedCornerShape(14.dp))
+                .background(KColors.card)
+                .border(1.dp, KColors.chipBorder, RoundedCornerShape(14.dp))
         ) {
-            Image(card.posterUrl, card.posterHeaders, Modifier.fillMaxSize())
+            KImage(card.posterUrl, card.posterHeaders, Modifier.fillMaxSize())
         }
-        Text(card.name, color = K.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+        Text(card.name, color = KColors.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
             maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
-@Composable
-private fun Image(url: String?, headers: Map<String, String>?, modifier: Modifier) {
-    if (url.isNullOrBlank()) return
-    val context = LocalContext.current
-    val request = remember(url, headers) {
-        ImageRequest.Builder(context)
-            .data(url)
-            .httpHeaders(NetworkHeaders.Builder().also { builder ->
-                builder["User-Agent"] = USER_AGENT
-                headers?.forEach { (key, value) -> builder[key] = value }
-            }.build())
-            .crossfade(true)
-            .build()
-    }
-    AsyncImage(
-        model = request,
-        contentDescription = null,
-        contentScale = ContentScale.Crop,
-        modifier = modifier
-    )
-}
