@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Вечорниці: бічна панель для планшета (ландшафт) -->
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/navigation_home"
+        android:icon="@drawable/home_icon_selector"
+        android:title="@string/title_home" />
+    <item
+        android:id="@+id/navigation_search"
+        android:icon="@drawable/search_icon"
+        android:title="@string/title_search" />
+    <item
+        android:id="@+id/kadr_rail_watching"
+        android:icon="@drawable/kadr_ic_watching"
+        android:title="@string/kadr_rail_watching" />
+    <item
+        android:id="@+id/kadr_rail_saved"
+        android:icon="@drawable/kadr_ic_saved"
+        android:title="@string/kadr_rail_saved" />
+    <item
+        android:id="@+id/kadr_rail_onhold"
+        android:icon="@drawable/kadr_ic_onhold"
+        android:title="@string/kadr_rail_onhold" />
+    <item
+        android:id="@+id/kadr_rail_planned"
+        android:icon="@drawable/kadr_ic_planned"
+        android:title="@string/kadr_rail_planned" />
+    <item
+        android:id="@+id/navigation_downloads"
+        android:icon="@drawable/netflix_download"
+        android:title="@string/title_downloads" />
+    <item
+        android:id="@+id/navigation_settings"
+        android:icon="@drawable/settings_icon_selector"
+        android:title="@string/title_settings" />
+</menu>

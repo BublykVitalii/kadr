@@ -1837,6 +1837,8 @@ class MainActivity : AppCompatActivity(), ColorPickerDialogListener, BiometricCa
             }
         }
 
+        com.lagradost.cloudstream3.kadr.KadrRail.setup(this, navController) // Вечорниці
+
         // Navigation button long click functionality to scroll to top
         for (view in listOf(binding?.navView, binding?.navRailView)) {
             view?.findViewById<View?>(R.id.navigation_home)?.setOnLongClickListener {

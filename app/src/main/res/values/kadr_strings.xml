@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="kadr_rail_watching" translatable="false">Переглядаю</string>
+    <string name="kadr_rail_saved" translatable="false">Збережене</string>
+    <string name="kadr_rail_onhold" translatable="false">Відкладено</string>
+    <string name="kadr_rail_planned" translatable="false">Заплановано</string>
+</resources>
