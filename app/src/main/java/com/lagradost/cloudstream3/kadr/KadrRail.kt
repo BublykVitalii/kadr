@@ -52,6 +52,17 @@ object KadrRail {
                 true
             }
         }
+
+        // Повторне натискання на вже підсвічений пункт (напр. «Головна», коли ти
+        // на пошуку чи сторінці серіалу) — Android вважає це «reselect» і нічого не робить.
+        rail.setOnItemReselectedListener { item ->
+            val target = targets[item.itemId]
+            if (target != null) {
+                openList(activity, navController, target)
+            } else if (navController.currentDestination?.id != item.itemId) {
+                NavigationUI.onNavDestinationSelected(item, navController)
+            }
+        }
     }
 
     private fun openList(

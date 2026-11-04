@@ -1,5 +1,8 @@
 package com.lagradost.cloudstream3.kadr
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -52,7 +55,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import com.lagradost.cloudstream3.AnimeSearchResponse
+import com.lagradost.cloudstream3.MovieSearchResponse
 import com.lagradost.cloudstream3.SearchResponse
+import com.lagradost.cloudstream3.TvSeriesSearchResponse
 import com.lagradost.cloudstream3.TvType
 import com.lagradost.cloudstream3.mvvm.Resource
 import com.lagradost.cloudstream3.ui.search.SEARCH_ACTION_LOAD
@@ -60,12 +66,14 @@ import com.lagradost.cloudstream3.ui.search.SearchClickCallback
 import com.lagradost.cloudstream3.ui.search.SearchFragment
 import com.lagradost.cloudstream3.ui.search.SearchHelper
 import com.lagradost.cloudstream3.ui.search.SearchViewModel
+import com.lagradost.cloudstream3.utils.SingleSelectionHelper.showBottomDialogInstant
 import kotlinx.coroutines.delay
 
 /** Один тайтл, знайдений на кількох сайтах */
 private data class MergedResult(
     val main: SearchResponse,
     val sites: List<SearchResponse>,
+    val year: Int?,
 )
 
 private enum class TypeFilter(val label: String) {
@@ -96,22 +104,54 @@ private fun TvType?.uaName(): String = when (this) {
 private fun normalize(name: String): String =
     name.lowercase().replace(Regex("[^\\p{L}\\p{N}]+"), " ").trim()
 
-/** Зводить результати з усіх сайтів: однакова назва → одна картка */
+/** Рік, якщо сайт його віддав */
+private fun SearchResponse.yearOrNull(): Int? = when (this) {
+    is MovieSearchResponse -> year
+    is TvSeriesSearchResponse -> year
+    is AnimeSearchResponse -> year
+    else -> null
+}
+
+/**
+ * Зводить результати з усіх сайтів: однакова назва + однаковий рік → одна картка.
+ * Якщо на якомусь сайті року немає — приєднуємо до найбільшої групи з такою назвою.
+ */
 private fun merge(bySite: Map<String, List<SearchResponse>>): List<MergedResult> {
-    val groups = LinkedHashMap<String, MutableList<SearchResponse>>()
-    // Порядок: спершу ті, що знайдені на найбільшій кількості сайтів
+    val byName = LinkedHashMap<String, MutableList<SearchResponse>>()
     bySite.values.forEach { list ->
         list.forEach { card ->
             val key = normalize(card.name)
-            if (key.isNotEmpty()) groups.getOrPut(key) { mutableListOf() }.add(card)
+            if (key.isNotEmpty()) byName.getOrPut(key) { mutableListOf() }.add(card)
         }
     }
-    return groups.values
-        .map { cards ->
-            val unique = cards.distinctBy { it.apiName }
-            MergedResult(main = unique.firstOrNull { it.posterUrl != null } ?: unique.first(), sites = unique)
+    val result = mutableListOf<MergedResult>()
+    byName.values.forEach { cards ->
+        val withYear = cards.filter { it.yearOrNull() != null }.groupBy { it.yearOrNull() }
+        val noYear = cards.filter { it.yearOrNull() == null }
+        val groups = withYear.values.map { it.toMutableList() }.toMutableList()
+        if (groups.isEmpty()) groups.add(mutableListOf()) 
+        groups.maxByOrNull { it.size }?.addAll(noYear)
+        groups.filter { it.isNotEmpty() }.forEach { group ->
+            val unique = group.distinctBy { it.apiName }
+            result.add(
+                MergedResult(
+                    main = unique.firstOrNull { it.posterUrl != null } ?: unique.first(),
+                    sites = unique,
+                    year = group.firstNotNullOfOrNull { it.yearOrNull() }
+                )
+            )
         }
-        .sortedByDescending { it.sites.size }
+    }
+    return result.sortedByDescending { it.sites.size }
+}
+
+private fun Context.findActivity(): Activity? {
+    var ctx: Context? = this
+    while (ctx is ContextWrapper) {
+        if (ctx is Activity) return ctx
+        ctx = ctx.baseContext
+    }
+    return null
 }
 
 class KadrSearchFragment : Fragment() {
@@ -241,21 +281,43 @@ private fun KadrSearchScreen(vm: SearchViewModel, initialQuery: String) {
         }
 
         items(merged) { result ->
-            ResultCard(result, onOpen = open)
+            ResultCard(
+                result,
+                onOpenCard = {
+                    if (result.sites.size <= 1) {
+                        open(result.main)
+                    } else {
+                        // Кілька сайтів — питаємо, звідки дивитись
+                        view.context.findActivity()?.showBottomDialogInstant(
+                            result.sites.map { site ->
+                                listOfNotNull(site.apiName, site.quality?.name).joinToString(" · ")
+                            },
+                            "Де дивитись «${result.main.name}»?",
+                            {},
+                            { index -> result.sites.getOrNull(index)?.let(open) }
+                        )
+                    }
+                },
+                onOpenSite = open
+            )
         }
     }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ResultCard(result: MergedResult, onOpen: (SearchResponse) -> Unit) {
+private fun ResultCard(
+    result: MergedResult,
+    onOpenCard: () -> Unit,
+    onOpenSite: (SearchResponse) -> Unit,
+) {
     val card = result.main
     Row(
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
             .background(Color(0xFF15171C))
-            .clickable { onOpen(card) }
+            .clickable { onOpenCard() }
             .padding(12.dp),
         horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
@@ -272,6 +334,7 @@ private fun ResultCard(result: MergedResult, onOpen: (SearchResponse) -> Unit) {
             Text(card.name, color = KColors.text, fontSize = 16.sp, fontWeight = FontWeight.Bold,
                 maxLines = 2, overflow = TextOverflow.Ellipsis)
             val meta = listOfNotNull(
+                result.year?.toString(),
                 card.type.uaName().takeIf { it.isNotEmpty() },
                 card.quality?.name
             ).joinToString(" · ")
@@ -285,7 +348,7 @@ private fun ResultCard(result: MergedResult, onOpen: (SearchResponse) -> Unit) {
                         Modifier
                             .clip(RoundedCornerShape(8.dp))
                             .background(Color(0xFF22252D))
-                            .clickable { onOpen(site) }
+                            .clickable { onOpenSite(site) }
                             .padding(horizontal = 10.dp, vertical = 6.dp)
                     ) {
                         Text(site.apiName, color = Color(0xFFD4D6DC), fontSize = 12.sp,
@@ -294,7 +357,7 @@ private fun ResultCard(result: MergedResult, onOpen: (SearchResponse) -> Unit) {
                 }
             }
             if (result.sites.size > 1) {
-                Text("Є на ${result.sites.size} сайтах — тисни на потрібний",
+                Text("Є на ${result.sites.size} сайтах — обери, звідки дивитись",
                     color = KColors.accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             }
         }
